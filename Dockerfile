@@ -1,32 +1,30 @@
-# Build stage
-FROM node:20-alpine as build
+# Build Stage
+# Use a smaller base image for building
+FROM node:20-bullseye-slim as build
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Install dependencies only (using package.json and package-lock.json)
 COPY package*.json ./
+RUN npm ci --only=production
 
-# Install dependencies
-RUN npm install
-
-# Copy project files
+# Copy source files and build
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Production stage
+# Production Stage
+# Use a minimal Nginx image to serve the static files
 FROM nginx:alpine
 
-# Copy built assets from build stage
+# Copy built assets from the build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
+# Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
 EXPOSE 80
 
-# Start nginx
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
